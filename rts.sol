@@ -1,79 +1,95 @@
-pragma solidity ^0.4.21;
+/**
+ *Submitted for verification at BscScan.com on 2021-10-14
+*/
 
-contract RITSCOIN {
+pragma solidity ^0.5.0;
 
-    uint256 totalSupply_; 
-    string public constant name = "RITS COIN";
-    string public constant symbol = "RTS";
-    uint8 public constant decimals = 3;
-    uint256 public constant initialSupply = 100000000000000*(10**uint256(decimals));
+// ----------------------------------------------------------------------------
+// ERC Token Standard #20 Interface
+//
+// ----------------------------------------------------------------------------
+contract ERC20Interface {
+    function totalSupply() public view returns (uint);
+    function balanceOf(address tokenOwner) public view returns (uint balance);
+    function allowance(address tokenOwner, address spender) public view returns (uint remaining);
+    function transfer(address to, uint tokens) public returns (bool success);
+    function approve(address spender, uint tokens) public returns (bool success);
+    function transferFrom(address from, address to, uint tokens) public returns (bool success);
 
-    event Transfer(address indexed from, address indexed to, uint256 value);
-    event Approval(address indexed owner, address indexed spender, uint256 value);
+    event Transfer(address indexed from, address indexed to, uint tokens);
+    event Approval(address indexed tokenOwner, address indexed spender, uint tokens);
+}
 
-    mapping (address => uint256) balances; 
-    mapping (address => mapping (address => uint256)) allowed;
-    
-    function totalSupply() public view returns (uint256){
-        return totalSupply_;
+// ----------------------------------------------------------------------------
+// Safe Math Library
+// ----------------------------------------------------------------------------
+contract SafeMath {
+    function safeAdd(uint a, uint b) public pure returns (uint c) {
+        c = a + b;
+        require(c >= a);
+    }
+    function safeSub(uint a, uint b) public pure returns (uint c) {
+        require(b <= a); c = a - b; } function safeMul(uint a, uint b) public pure returns (uint c) { c = a * b; require(a == 0 || c / a == b); } function safeDiv(uint a, uint b) public pure returns (uint c) { require(b > 0);
+        c = a / b;
+    }
+}
+
+
+contract RTS is ERC20Interface, SafeMath {
+    string public name;
+    string public symbol;
+    uint8 public decimals; // 18 decimals is the strongly suggested default, avoid changing it
+
+    uint256 public _totalSupply;
+
+    mapping(address => uint) balances;
+    mapping(address => mapping(address => uint)) allowed;
+
+    /**
+     * Constrctor function
+     *
+     * Initializes contract with initial supply tokens to the creator of the contract
+     */
+    constructor() public {
+        name = "RITS COIN";
+        symbol = "RTS";
+        decimals = 3;
+        _totalSupply = 100000000000000;
+
+        balances[msg.sender] = _totalSupply;
+        emit Transfer(address(0), msg.sender, _totalSupply);
     }
 
-    function balanceOf(address _owner) public view returns (uint256){
-        return balances[_owner];
+    function totalSupply() public view returns (uint) {
+        return _totalSupply  - balances[address(0)];
     }
 
-    function allowance(address _owner, address _spender) public view returns (uint256) {
-        return allowed[_owner][_spender];
-  }
+    function balanceOf(address tokenOwner) public view returns (uint balance) {
+        return balances[tokenOwner];
+    }
 
-    function transfer(address _to, uint256 _value) public returns (bool ) {
-        require(_to != address(0));
-        require(balances[msg.sender] >= _value); 
-        balances[msg.sender] = balances[msg.sender] - _value; 
-        balances[_to] = balances[_to] + _value; 
-        emit Transfer(msg.sender, _to, _value);
+    function allowance(address tokenOwner, address spender) public view returns (uint remaining) {
+        return allowed[tokenOwner][spender];
+    }
+
+    function approve(address spender, uint tokens) public returns (bool success) {
+        allowed[msg.sender][spender] = tokens;
+        emit Approval(msg.sender, spender, tokens);
         return true;
     }
 
-    function approve(address _spender, uint256 _value) public returns (bool) {
-        allowed[msg.sender][_spender] = _value;
-        emit Approval(msg.sender, _spender, _value);
+    function transfer(address to, uint tokens) public returns (bool success) {
+        balances[msg.sender] = safeSub(balances[msg.sender], tokens);
+        balances[to] = safeAdd(balances[to], tokens);
+        emit Transfer(msg.sender, to, tokens);
         return true;
     }
 
-    function transferFrom(address _from, address _to, uint256 _value) public returns (bool) {
-        require(_to != address(0));
-        require(_value <= balances[_from]);
-        require(_value <= allowed[_from][msg.sender]); 
-        balances[_from] = balances[_from] - _value; 
-        balances[_to] = balances[_to] + _value; 
-        allowed[_from][msg.sender] = allowed[_from][msg.sender] - _value; 
-        emit Transfer(_from, _to, _value); 
-        return true; 
-        } 
-
-     function increaseApproval(address _spender, uint _addedValue) public returns (bool) { 
-     allowed[msg.sender][_spender] = allowed[msg.sender][_spender] + _addedValue; 
-     emit Approval(msg.sender, _spender, allowed[msg.sender][_spender]); 
-     return true; 
-     } 
- 
-    function decreaseApproval(address _spender, uint _subtractedValue) public returns (bool) { 
-    uint oldValue = allowed[msg.sender][_spender]; 
-    if (_subtractedValue > oldValue) {
-
-        allowed[msg.sender][_spender] = 0;
-    } 
-        else {
-        allowed[msg.sender][_spender] = oldValue - _subtractedValue;
-    }
-    emit Approval(msg.sender, _spender, allowed[msg.sender][_spender]);
-    return true;
-    }
-
-    function simpleToken() public {
-        totalSupply_ = initialSupply;
-        balances[msg.sender] = initialSupply;
-        emit Transfer(0x0, msg.sender, initialSupply);
+    function transferFrom(address from, address to, uint tokens) public returns (bool success) {
+        balances[from] = safeSub(balances[from], tokens);
+        allowed[from][msg.sender] = safeSub(allowed[from][msg.sender], tokens);
+        balances[to] = safeAdd(balances[to], tokens);
+        emit Transfer(from, to, tokens);
+        return true;
     }
 }
